@@ -1,0 +1,30 @@
+{
+  "name": "reb-report-to-csv",
+  "version": "1.0.0",
+  "description": "A small console app for making CSV out of Rebilly reports",
+  "scripts": {
+    "build": "rimraf dist/ && babel ./src --out-dir dist/ --copy-files",
+    "start": "npm run build && node --require dotenv/config  dist/index.js"
+  },
+  "repository": "https://github.com/Teknologica/reb-report-to-csv.git",
+  "author": "Andrei Moldoveanu <andrei@ilabsinc.com>",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.18.0",
+    "babel-polyfill": "^6.26.0",
+    "chalk": "^2.4.1",
+    "clear": "^0.1.0",
+    "cross-env": "^5.2.0",
+    "dotenv": "^6.0.0",
+    "inquirer": "^6.1.0",
+    "multispinner": "^0.2.1",
+    "rimraf": "^2.6.2"
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-destructuring": "^7.0.0-beta.56",
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.3",
+    "babel-preset-env": "^1.7.0"
+  }
+}
