@@ -2,9 +2,8 @@ const delimiters = {
     query: '?',
     params: '&',
 };
-export default function parseUrl(url) {
+export default function parseUrl(url, max) {
     let offset = 0;
-    const max = 1000;
     let limit = max;
     if (!url.includes(delimiters.query)) {
         throw new Error('bad url');
