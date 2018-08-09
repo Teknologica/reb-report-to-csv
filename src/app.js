@@ -1,6 +1,7 @@
 import axios from 'axios';
 import inquirer from 'inquirer';
 import Multispinner from 'multispinner';
+import chalk from 'chalk';
 import parseUrl from './parse-url';
 
 export default function app() {
@@ -8,6 +9,8 @@ export default function app() {
         headers: {'REB-APIKEY': process.env.APIKEY},
         timeout: 60000,
     });
+
+    const baseLimit = 1000;
 
     const fetchAmount = {
         all: 'all',
@@ -27,7 +30,7 @@ export default function app() {
             type: 'input',
             name: 'url',
             message: `What's the url of the report including the date range`,
-            default: `http://api.dev-local.rebilly.com/experimental/reports/transactions?aggregationField=website&periodStart=2018-08-01T00:00:00-04:00&periodEnd=2018-08-08T23:59:59-04:00&limit=20&offset=0&tz=-240`,
+            default: ``,
         },
         {
             type: 'list',
@@ -51,12 +54,13 @@ export default function app() {
 
     (async () => {
         let amount = fetchAmount.all;
+        let totalRecords;
         const answers = await inquirer.prompt(questions);
         if (answers.fetchAmount !== fetchAmount.all) {
             const newStep = await inquirer.prompt(customAmountQuestion);
             amount = newStep.amount;
         }
-        const spinners = new Multispinner(['requests'], Object.assign({}, spinnerConfig, {
+        const firstSpinner = new Multispinner(['requests'], Object.assign({}, spinnerConfig, {
             preText: 'Calculating',
         }));
         const urlBuilder = parseUrl(answers.url);
@@ -64,12 +68,52 @@ export default function app() {
         urlBuilder.setLimit(1);
 
         try {
-            spinners.start('requests');
+            firstSpinner.start('requests');
             const response = await api.get(urlBuilder.build());
-            spinners.success('requests');
-            
+
+            totalRecords = Number(response.headers['pagination-total']);
+            firstSpinner.success('requests');
+            setTimeout(async () => {
+                console.log(chalk.green(`Found ${totalRecords} record${totalRecords === 1 ? '' : 's'} for request.`));
+                if (totalRecords > 0) {
+                    if (amount !== fetchAmount.all) {
+                        // restrict amount if needed
+                        totalRecords = Number(amount);
+                    }
+                    const fetches = Math.ceil(totalRecords / baseLimit);
+                    const concurrentMax = 5;
+                    const steps = Math.ceil(fetches / concurrentMax);
+                    let target = concurrentMax * baseLimit;
+                    if (target > totalRecords) {
+                        target = totalRecords;
+                    }
+                    let step = 0;
+                    const process = async () => {
+                        step += 1;
+                        const promiseCount = Math.ceil(target / baseLimit);
+
+                        try {
+                            const promises = Array.from(new Array(promiseCount)).map((e, i) => {
+
+                                return () => {
+                                    return i;
+                                };
+                            });
+                            const result = await Promise.all(promises);
+
+                        } catch (e) {
+                            console.log(e);
+                        }
+                        if (step < steps) {
+                            await process();
+                        }
+                    };
+                    await process();
+                }
+            }, 100);
+
         } catch (err) {
-            spinners.error('requests');
+            firstSpinner.error('requests');
             console.log(err);
         }
     })();
